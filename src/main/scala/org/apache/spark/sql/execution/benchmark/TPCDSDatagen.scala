@@ -237,7 +237,7 @@ class Tables(sqlContext: SQLContext, scaleFactor: Int) extends Serializable {
       tables
     }
 
-    withSpecifiedDataType.foreach { table =>
+    withSpecifiedDataType.par.foreach { table =>
       val tableLocation = s"$location/${table.name}"
       table.genData(tableLocation, format, overwrite, clusterByPartitionColumns,
         filterOutNullPartitionValues, numPartitions)
@@ -796,7 +796,8 @@ object TPCDSDatagen {
 
   def main(args: Array[String]): Unit = {
     val datagenArgs = new TPCDSDatagenArguments(args)
-    val spark = SparkSession.builder.getOrCreate()
+    val spark = SparkSession.builder.enableHiveSupport().getOrCreate()
+    spark.sql(s"create database if not exist tpcds_${datagenArgs.scaleFactor.toInt}_${datagenArgs.partitionTables}")
     val tpcdsTables = new Tables(spark.sqlContext, datagenArgs.scaleFactor.toInt)
     tpcdsTables.genData(
       datagenArgs.outputLocation,
